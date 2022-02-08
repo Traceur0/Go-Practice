@@ -1,5 +1,3 @@
-//git upload test
-
 package main
 
 import (
@@ -8,10 +6,16 @@ import (
 	"net/http"
 )
 
+type requestResult struct {
+	url string
+	status string
+}
+
 var errRequestFailed = errors.New("request failed")
 
 func main() {
-	var results = make(map[string]string)
+	results := make(map[string]string)
+	channel := make(chan requestResult)
 	urls := []string{
 		"https://www.jsafklajweioj.com",
 		"https://www.airbnb.com/",
@@ -24,24 +28,22 @@ func main() {
 		"https://academy.nomadcoders.co",
 	}
 	for _, url := range urls {
-		result := "OK"
-		err := hitURL(url)
-		if err != nil {
-			result = "FAILED"
-		}
-		results[url] = result
+		go hitURL(url, channel)
 	}
-	for url, result := range results {
-		fmt.Println(url, result)
+	for i:=0; i < len(urls); i++ {
+		result := <-channel
+		results[result.url] = result.status 
+	}
+	for url, status := range results {
+		fmt.Println(url, status)
 	}
 }
 
-
-func hitURL(url string) error {
-	fmt.Println("Checking :", url)
+func hitURL(url string, channel chan<- requestResult) {
 	resp, err := http.Get(url)
+	status := "Status : Online"
 	if err != nil || resp.StatusCode >= 400 {
-		return errRequestFailed
+		status = "Status : Offline"
 	}
-	return nil
+	channel <- requestResult{url: url, status: status}
 }
